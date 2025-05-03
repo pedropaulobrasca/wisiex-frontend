@@ -27,49 +27,63 @@ const StatisticsPanel: React.FC = () => {
             <Card className="bg-secondary">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Last Price</p>
-                <p className="text-lg font-medium">${statistics?.lastPrice.toLocaleString()}</p>
+                <p className="text-lg font-medium">
+                  ${statistics?.lastPrice ? statistics.lastPrice.toLocaleString() : '0.00'}
+                </p>
               </CardContent>
             </Card>
             
             <Card className="bg-secondary">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">24h High</p>
-                <p className="text-lg font-medium text-positive">${statistics?.high.toLocaleString()}</p>
+                <p className="text-lg font-medium text-positive">
+                  ${statistics?.high ? statistics.high.toLocaleString() : '0.00'}
+                </p>
               </CardContent>
             </Card>
             
             <Card className="bg-secondary">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">24h Low</p>
-                <p className="text-lg font-medium text-negative">${statistics?.low.toLocaleString()}</p>
+                <p className="text-lg font-medium text-negative">
+                  ${statistics?.low ? statistics.low.toLocaleString() : '0.00'}
+                </p>
               </CardContent>
             </Card>
             
             <Card className="bg-secondary">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">BTC Volume (24h)</p>
-                <p className="text-lg font-medium">{statistics?.btcVolume.toLocaleString()} BTC</p>
+                <p className="text-lg font-medium">
+                  {statistics?.btcVolume ? statistics.btcVolume.toLocaleString() : '0.00'} BTC
+                </p>
               </CardContent>
             </Card>
             
             <Card className="bg-secondary">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">USD Volume (24h)</p>
-                <p className="text-lg font-medium">${statistics?.usdVolume.toLocaleString()}</p>
+                <p className="text-lg font-medium">
+                  ${statistics?.usdVolume ? statistics.usdVolume.toLocaleString() : '0.00'}
+                </p>
               </CardContent>
             </Card>
             
             <Card className="bg-secondary">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">BTC Balance</p>
-                <p className="text-lg font-medium">{balance?.btc.toLocaleString()} BTC</p>
+                <p className="text-lg font-medium">
+                  {balance?.btc ? balance.btc.toLocaleString() : '0.00'} BTC
+                </p>
               </CardContent>
             </Card>
             
             <Card className="bg-secondary">
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">USD Balance</p>
-                <p className="text-lg font-medium">${balance?.usd.toLocaleString()}</p>
+                <p className="text-lg font-medium">
+                  ${balance?.usd ? balance.usd.toLocaleString() : '0.00'}
+                </p>
               </CardContent>
             </Card>
           </>

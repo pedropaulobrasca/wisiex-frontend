@@ -84,19 +84,19 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Fetch all data in parallel
       const [statsData, bookData, ordersData, globalMatchesData, userMatchesData, balanceData] = await Promise.all([
-        tradeService.getStatistics(),
-        tradeService.getOrderBook(),
-        tradeService.getUserOrders(),
-        tradeService.getGlobalMatches(),
-        tradeService.getUserMatches(),
-        tradeService.getUserBalance()
+        tradeService.getStatistics().catch(() => null),
+        tradeService.getOrderBook().catch(() => null),
+        tradeService.getUserOrders().catch(() => []),
+        tradeService.getGlobalMatches().catch(() => []),
+        tradeService.getUserMatches().catch(() => []),
+        tradeService.getUserBalance().catch(() => null)
       ]);
       
       setStatistics(statsData);
       setOrderBook(bookData);
-      setUserOrders(ordersData);
-      setGlobalMatches(globalMatchesData);
-      setUserMatches(userMatchesData);
+      setUserOrders(Array.isArray(ordersData) ? ordersData : []);
+      setGlobalMatches(Array.isArray(globalMatchesData) ? globalMatchesData : []);
+      setUserMatches(Array.isArray(userMatchesData) ? userMatchesData : []);
       setBalance(balanceData);
     } catch (error) {
       console.error('Error fetching trade data:', error);
