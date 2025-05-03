@@ -17,6 +17,14 @@ const OrderBook: React.FC = () => {
     setSelectedOrderForBuy(ask);
   };
 
+  // Calculate spread safely with null checks
+  const calculateSpread = () => {
+    if (!orderBook?.asks?.length || !orderBook?.bids?.length) {
+      return 0;
+    }
+    return orderBook.asks[0].price - orderBook.bids[0].price;
+  };
+
   if (loading) {
     return (
       <div className="order-book trading-panel">
@@ -111,9 +119,7 @@ const OrderBook: React.FC = () => {
                   
                   <TableRow className="bg-secondary/30">
                     <TableCell colSpan={2} className="text-center py-1 border-y border-primary/30">
-                      Spread: ${orderBook?.asks[0] && orderBook?.bids[0] 
-                        ? (orderBook.asks[0].price - orderBook.bids[0].price).toLocaleString() 
-                        : '0'}
+                      Spread: ${calculateSpread().toLocaleString()}
                     </TableCell>
                   </TableRow>
                   
