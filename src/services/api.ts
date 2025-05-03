@@ -1,7 +1,6 @@
-
 import axios from 'axios';
 
-const API_URL = 'https://7709-2804-7f0-9402-ef0-ac93-2b71-d52e-201b.ngrok-free.app'; // Updated API URL
+const API_URL = 'https://7709-2804-7f0-9402-ef0-ac93-2b71-d52e-201b.ngrok-free.app'; // Using the provided ngrok URL
 
 const api = axios.create({
   baseURL: API_URL,
@@ -67,6 +66,8 @@ export const authService = {
 export const tradeService = {
   getStatistics: async () => {
     try {
+      // Endpoint not in the client.http but necessary for the frontend
+      // Using a fallback approach
       const response = await api.get('/statistics');
       return response.data;
     } catch (error) {
@@ -83,7 +84,8 @@ export const tradeService = {
   },
   getOrderBook: async () => {
     try {
-      const response = await api.get('/orderbook');
+      // Updated to match the client.http endpoint
+      const response = await api.get('/order-book');
       return response.data;
     } catch (error) {
       console.error('Error fetching order book:', error);
@@ -96,7 +98,8 @@ export const tradeService = {
   },
   getGlobalMatches: async () => {
     try {
-      const response = await api.get('/matches/global');
+      // Updated to match the client.http endpoint
+      const response = await api.get('/matches');
       return response.data;
     } catch (error) {
       console.error('Error fetching global matches:', error);
@@ -105,7 +108,8 @@ export const tradeService = {
   },
   getUserOrders: async () => {
     try {
-      const response = await api.get('/orders/user');
+      // Updated to match the client.http endpoint
+      const response = await api.get('/orders');
       return response.data;
     } catch (error) {
       console.error('Error fetching user orders:', error);
@@ -114,7 +118,8 @@ export const tradeService = {
   },
   getUserMatches: async () => {
     try {
-      const response = await api.get('/matches/user');
+      // Updated to match the client.http endpoint
+      const response = await api.get('/matches/my-matches');
       return response.data;
     } catch (error) {
       console.error('Error fetching user matches:', error);
@@ -126,7 +131,12 @@ export const tradeService = {
     amount: number;
     price: number;
   }) => {
-    const response = await api.post('/orders', orderData);
+    // Updated to match the client.http format for order type (uppercase)
+    const formattedData = {
+      ...orderData,
+      type: orderData.type.toUpperCase()
+    };
+    const response = await api.post('/orders', formattedData);
     return response.data;
   },
   cancelOrder: async (orderId: string) => {
@@ -135,6 +145,8 @@ export const tradeService = {
   },
   getUserBalance: async () => {
     try {
+      // This endpoint wasn't in client.http, but it's needed for the frontend
+      // We'll keep it and handle errors gracefully
       const response = await api.get('/user/balance');
       return response.data;
     } catch (error) {
