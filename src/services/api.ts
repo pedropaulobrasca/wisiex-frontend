@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000'; // Change this to match your backend URL
+const API_URL = 'https://7709-2804-7f0-9402-ef0-ac93-2b71-d52e-201b.ngrok-free.app'; // Updated API URL
 
 const api = axios.create({
   baseURL: API_URL,
