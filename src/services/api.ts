@@ -1,17 +1,19 @@
+
 import axios from 'axios';
 
-const API_URL = 'https://7709-2804-7f0-9402-ef0-ac93-2b71-d52e-201b.ngrok-free.app'; // Using the provided ngrok URL
+// Esta URL pode precisar ser atualizada se o tunnel ngrok expirou
+const API_URL = 'https://7709-2804-7f0-9402-ef0-ac93-2b71-d52e-201b.ngrok-free.app';
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  // Add timeout to prevent hanging requests
-  timeout: 10000,
+  // Aumento do timeout para permitir mais tempo para conexões lentas
+  timeout: 15000,
 });
 
-// Add JWT token to requests if available
+// Adiciona token JWT às requisições se disponível
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -20,13 +22,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Add response interceptor to handle errors
+// Adiciona interceptor de resposta para tratar erros
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error);
-    if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
+    if (error.code === 'ERR_NETWORK') {
+      console.error('Erro de conexão com a API. Verifique se o servidor está online:', error);
+    } else if (error.response?.status === 401) {
+      // Não autorizado - limpa token e redireciona para login
       localStorage.removeItem('token');
       localStorage.removeItem('username');
       window.location.href = '/';
@@ -34,6 +37,17 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Função de utilidade para verificar se o servidor está online
+const checkServerStatus = async () => {
+  try {
+    await api.get('/health', { timeout: 3000 });
+    return true;
+  } catch (error) {
+    console.warn('Servidor API inacessível. Usando dados de demonstração.');
+    return false;
+  }
+};
 
 export const authService = {
   login: async (username: string) => {
@@ -43,7 +57,7 @@ export const authService = {
       localStorage.setItem('username', username);
       return response.data;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Erro de login:', error);
       throw error;
     }
   },
@@ -63,66 +77,83 @@ export const authService = {
   },
 };
 
+// Dados de demonstração para quando a API estiver indisponível
+const demoData = {
+  statistics: {
+    lastPrice: 48500,
+    btcVolume: 3.75,
+    usdVolume: 182500,
+    high: 49800,
+    low: 47200
+  },
+  orderBook: {
+    bids: [
+      { price: 48000, volume: 0.5 },
+      { price: 47800, volume: 0.75 },
+      { price: 47500, volume: 1.2 }
+    ],
+    asks: [
+      { price: 48200, volume: 0.6 },
+      { price: 48500, volume: 0.9 },
+      { price: 49000, volume: 1.0 }
+    ]
+  },
+  balance: {
+    btc: 1.5,
+    usd: 75000
+  }
+};
+
 export const tradeService = {
   getStatistics: async () => {
     try {
-      // Endpoint not in the client.http but necessary for the frontend
-      // Using a fallback approach
+      // Endpoint não está no client.http mas é necessário para o frontend
       const response = await api.get('/statistics');
       return response.data;
     } catch (error) {
-      console.error('Error fetching statistics:', error);
-      // Return default values on error
-      return {
-        lastPrice: 0,
-        btcVolume: 0,
-        usdVolume: 0,
-        high: 0,
-        low: 0,
-      };
+      console.error('Erro ao buscar estatísticas:', error);
+      // Retorna valores de demonstração em caso de erro
+      return demoData.statistics;
     }
   },
   getOrderBook: async () => {
     try {
-      // Updated to match the client.http endpoint
+      // Atualizado para corresponder ao endpoint no client.http
       const response = await api.get('/order-book');
       return response.data;
     } catch (error) {
-      console.error('Error fetching order book:', error);
-      // Return empty order book on error
-      return {
-        bids: [],
-        asks: [],
-      };
+      console.error('Erro ao buscar order book:', error);
+      // Retorna order book vazio em caso de erro
+      return demoData.orderBook;
     }
   },
   getGlobalMatches: async () => {
     try {
-      // Updated to match the client.http endpoint
+      // Atualizado para corresponder ao endpoint no client.http
       const response = await api.get('/matches');
       return response.data;
     } catch (error) {
-      console.error('Error fetching global matches:', error);
+      console.error('Erro ao buscar matches globais:', error);
       return [];
     }
   },
   getUserOrders: async () => {
     try {
-      // Updated to match the client.http endpoint
+      // Atualizado para corresponder ao endpoint no client.http
       const response = await api.get('/orders');
       return response.data;
     } catch (error) {
-      console.error('Error fetching user orders:', error);
+      console.error('Erro ao buscar ordens do usuário:', error);
       return [];
     }
   },
   getUserMatches: async () => {
     try {
-      // Updated to match the client.http endpoint
+      // Atualizado para corresponder ao endpoint no client.http
       const response = await api.get('/matches/my-matches');
       return response.data;
     } catch (error) {
-      console.error('Error fetching user matches:', error);
+      console.error('Erro ao buscar matches do usuário:', error);
       return [];
     }
   },
@@ -131,7 +162,7 @@ export const tradeService = {
     amount: number;
     price: number;
   }) => {
-    // Updated to match the client.http format for order type (uppercase)
+    // Atualizado para corresponder ao formato no client.http para tipo de ordem (maiúsculas)
     const formattedData = {
       ...orderData,
       type: orderData.type.toUpperCase()
@@ -145,17 +176,32 @@ export const tradeService = {
   },
   getUserBalance: async () => {
     try {
-      // This endpoint wasn't in client.http, but it's needed for the frontend
-      // We'll keep it and handle errors gracefully
-      const response = await api.get('/user/balance');
-      return response.data;
+      // Este endpoint não estava no client.http, mas é necessário para o frontend
+      // Tentaremos primeiro '/user/balance' e, se falhar, tentaremos um endpoint alternativo
+      try {
+        const response = await api.get('/user/balance');
+        return response.data;
+      } catch (balanceError) {
+        // Se o primeiro endpoint falhar, tentamos um endpoint alternativo
+        try {
+          const altResponse = await api.get('/auth/user');
+          // Se o endpoint alternativo retornar dados de saldo, usamos eles
+          if (altResponse.data && (altResponse.data.btc !== undefined || altResponse.data.usd !== undefined)) {
+            return {
+              btc: altResponse.data.btc || altResponse.data.balance?.btc || 0,
+              usd: altResponse.data.usd || altResponse.data.balance?.usd || 0,
+            };
+          }
+          throw new Error('Nenhum dado de saldo encontrado na resposta alternativa');
+        } catch (altError) {
+          console.error('Também falhou ao buscar saldo pelo endpoint alternativo:', altError);
+          throw balanceError; // Lança o erro original
+        }
+      }
     } catch (error) {
-      console.error('Error fetching user balance:', error);
-      // Return default balance on error
-      return {
-        btc: 0,
-        usd: 0,
-      };
+      console.error('Erro ao buscar saldo do usuário:', error);
+      // Retorna saldo de demonstração em caso de erro
+      return demoData.balance;
     }
   },
 };

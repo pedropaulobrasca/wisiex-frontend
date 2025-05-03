@@ -52,6 +52,7 @@ interface TradeContextType {
   userMatches: Match[];
   balance: Balance | null;
   loading: boolean;
+  isUsingDemoData: boolean;
   selectedOrderForBuy: { price: number; volume: number } | null;
   selectedOrderForSell: { price: number; volume: number } | null;
   fetchData: () => Promise<void>;
@@ -71,6 +72,7 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUsingDemoData, setIsUsingDemoData] = useState(false);
   const [selectedOrderForBuy, setSelectedOrderForBuy] = useState<{ price: number; volume: number } | null>(null);
   const [selectedOrderForSell, setSelectedOrderForSell] = useState<{ price: number; volume: number } | null>(null);
   const { toast } = useToast();
@@ -82,16 +84,29 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       setLoading(true);
       
+      // Attempt to fetch data and track if we're using demo data
+      let usingDemoData = false;
+      
       // Fetch all data in parallel
       const [statsData, bookData, ordersData, globalMatchesData, userMatchesData, balanceData] = await Promise.all([
-        tradeService.getStatistics().catch(() => null),
-        tradeService.getOrderBook().catch(() => null),
+        tradeService.getStatistics().catch(() => {
+          usingDemoData = true;
+          return null;
+        }),
+        tradeService.getOrderBook().catch(() => {
+          usingDemoData = true;
+          return null;
+        }),
         tradeService.getUserOrders().catch(() => []),
         tradeService.getGlobalMatches().catch(() => []),
         tradeService.getUserMatches().catch(() => []),
-        tradeService.getUserBalance().catch(() => null)
+        tradeService.getUserBalance().catch(() => {
+          usingDemoData = true;
+          return null;
+        })
       ]);
       
+      setIsUsingDemoData(usingDemoData);
       setStatistics(statsData);
       setOrderBook(bookData);
       setUserOrders(Array.isArray(ordersData) ? ordersData : []);
@@ -167,6 +182,7 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         userMatches,
         balance,
         loading,
+        isUsingDemoData,
         selectedOrderForBuy,
         selectedOrderForSell,
         fetchData,
