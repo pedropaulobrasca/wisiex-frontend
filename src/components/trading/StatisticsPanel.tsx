@@ -1,105 +1,112 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTrade } from '@/contexts/TradeContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
 
+// Este componente deve ocupar 3 colunas no grid através da classe statistics-panel
 const StatisticsPanel: React.FC = () => {
-  const { statistics, balance, loading, isUsingDemoData } = useTrade();
+  const { statistics, loading, balance, connectionStatus } = useTrade();
+
+  if (loading) {
+    return (
+      <div className="statistics-panel trading-panel">
+        <h2 className="text-xl font-semibold">Estatísticas do Mercado</h2>
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
 
   return (
-    <div className="stats-panel trading-panel">
-      <h2 className="text-xl font-semibold mb-4">Market Statistics</h2>
+    <div className="statistics-panel trading-panel w-full">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Estatísticas do Mercado</h2>
+        <span className={connectionStatus === 'connected' ? 'text-positive' : 'text-negative'}>
+          {connectionStatus === 'connected' ? '● Online' : '● Offline'}
+        </span>
+      </div>
       
-      {isUsingDemoData && (
-        <Alert variant="warning" className="mb-4 bg-yellow-50 border-yellow-200">
-          <AlertCircle className="h-4 w-4 text-yellow-600 mr-2" />
-          <AlertDescription className="text-yellow-700">
-            Usando dados de demonstração. O servidor pode estar indisponível.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Estatísticas do mercado em uma única linha */}
+      <div className="grid grid-cols-5 gap-2 mb-4">
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">Último Preço</p>
+              <p className="text-lg font-bold">
+                ${statistics?.lastPrice?.toLocaleString() || '0'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">Vol. BTC</p>
+              <p className="text-lg font-bold">
+                {statistics?.btcVolume?.toLocaleString() || '0'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">Vol. USD</p>
+              <p className="text-lg font-bold">
+                ${statistics?.usdVolume?.toLocaleString() || '0'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">Alta 24h</p>
+              <p className="text-lg font-bold text-positive">
+                ${statistics?.high?.toLocaleString() || '0'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">Baixa 24h</p>
+              <p className="text-lg font-bold text-negative">
+                ${statistics?.low?.toLocaleString() || '0'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {loading ? (
-          Array(7)
-            .fill(0)
-            .map((_, i) => (
-              <Card key={i} className="bg-secondary">
-                <CardContent className="p-4">
-                  <Skeleton className="h-4 w-24 mb-2" />
-                  <Skeleton className="h-6 w-16" />
-                </CardContent>
-              </Card>
-            ))
-        ) : (
-          <>
-            <Card className="bg-secondary">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">Last Price</p>
-                <p className="text-lg font-medium">
-                  ${statistics?.lastPrice?.toLocaleString() || '0.00'}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-secondary">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">24h High</p>
-                <p className="text-lg font-medium text-positive">
-                  ${statistics?.high?.toLocaleString() || '0.00'}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-secondary">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">24h Low</p>
-                <p className="text-lg font-medium text-negative">
-                  ${statistics?.low?.toLocaleString() || '0.00'}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-secondary">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">BTC Volume (24h)</p>
-                <p className="text-lg font-medium">
-                  {statistics?.btcVolume?.toLocaleString() || '0.00'} BTC
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-secondary">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">USD Volume (24h)</p>
-                <p className="text-lg font-medium">
-                  ${statistics?.usdVolume?.toLocaleString() || '0.00'}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-secondary">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">BTC Balance</p>
-                <p className="text-lg font-medium">
-                  {balance?.btc?.toLocaleString() || '0.00'} BTC
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-secondary">
-              <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">USD Balance</p>
-                <p className="text-lg font-medium">
-                  ${balance?.usd?.toLocaleString() || '0.00'}
-                </p>
-              </CardContent>
-            </Card>
-          </>
-        )}
+      {/* Saldo do usuário */}
+      <div className="mt-2 border-t pt-3">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-md font-semibold">Seu Saldo</h3>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="bg-primary/5">
+            <CardContent className="p-3 flex justify-between items-center">
+              <span className="font-medium text-sm">USD</span>
+              <span className="text-xl font-bold">
+                ${balance?.usd?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}
+              </span>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-primary/5">
+            <CardContent className="p-3 flex justify-between items-center">
+              <span className="font-medium text-sm">BTC</span>
+              <span className="text-xl font-bold">
+                {balance?.btc?.toLocaleString(undefined, {minimumFractionDigits: 6, maximumFractionDigits: 6}) || '0.000000'}
+              </span>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

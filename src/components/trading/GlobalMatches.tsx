@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useTrade } from '@/contexts/TradeContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,7 +9,7 @@ const GlobalMatches: React.FC = () => {
   if (loading) {
     return (
       <div className="global-matches trading-panel">
-        <h2 className="text-xl font-semibold mb-4">Global Matches</h2>
+        <h2 className="text-xl font-semibold">Global Matches</h2>
         <Skeleton className="h-64 w-full" />
       </div>
     );
@@ -18,10 +17,10 @@ const GlobalMatches: React.FC = () => {
 
   return (
     <div className="global-matches trading-panel">
-      <h2 className="text-xl font-semibold mb-4">Global Matches</h2>
-      <div className="overflow-auto max-h-[400px]">
+      <h2 className="text-xl font-semibold">Global Matches</h2>
+      <div className="table-container max-h-[300px]">
         <Table>
-          <TableHeader className="sticky top-0 bg-card">
+          <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
               <TableHead className="w-1/3">Price</TableHead>
               <TableHead className="w-1/3">Volume</TableHead>
@@ -33,10 +32,10 @@ const GlobalMatches: React.FC = () => {
               globalMatches.map((match) => (
                 <TableRow key={match.id}>
                   <TableCell className={`font-medium ${match.type === 'buy' ? 'text-positive' : 'text-negative'}`}>
-                    ${match.price.toLocaleString()}
+                    ${typeof match.price === 'number' ? match.price.toLocaleString() : '0'}
                   </TableCell>
-                  <TableCell>{match.amount.toLocaleString()} BTC</TableCell>
-                  <TableCell>{new Date(match.createdAt).toLocaleTimeString()}</TableCell>
+                  <TableCell>{typeof match.amount === 'number' ? match.amount.toLocaleString() : '0'} BTC</TableCell>
+                  <TableCell>{match.createdAt ? new Date(match.createdAt).toLocaleTimeString() : 'N/A'}</TableCell>
                 </TableRow>
               ))
             ) : (

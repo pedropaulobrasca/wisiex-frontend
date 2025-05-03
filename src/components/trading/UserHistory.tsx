@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useTrade } from '@/contexts/TradeContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,7 +9,7 @@ const UserHistory: React.FC = () => {
   if (loading) {
     return (
       <div className="history-panel trading-panel">
-        <h2 className="text-xl font-semibold mb-4">My History</h2>
+        <h2 className="text-xl font-semibold">My History</h2>
         <Skeleton className="h-32 w-full" />
       </div>
     );
@@ -18,10 +17,10 @@ const UserHistory: React.FC = () => {
 
   return (
     <div className="history-panel trading-panel">
-      <h2 className="text-xl font-semibold mb-4">My History</h2>
-      <div className="overflow-auto">
+      <h2 className="text-xl font-semibold">My History</h2>
+      <div className="table-container max-h-[300px]">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
               <TableHead>Price</TableHead>
               <TableHead>Volume</TableHead>
@@ -34,13 +33,13 @@ const UserHistory: React.FC = () => {
               userMatches.map((match) => (
                 <TableRow key={match.id}>
                   <TableCell className={match.type === 'buy' ? 'text-positive' : 'text-negative'}>
-                    ${match.price.toLocaleString()}
+                    ${typeof match.price === 'number' ? match.price.toLocaleString() : '0'}
                   </TableCell>
-                  <TableCell>{match.amount.toLocaleString()} BTC</TableCell>
+                  <TableCell>{typeof match.amount === 'number' ? match.amount.toLocaleString() : '0'} BTC</TableCell>
                   <TableCell className={match.type === 'buy' ? 'text-positive' : 'text-negative'}>
                     {match.type === 'buy' ? 'Buy' : 'Sell'}
                   </TableCell>
-                  <TableCell>{new Date(match.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>{match.createdAt ? new Date(match.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
                 </TableRow>
               ))
             ) : (

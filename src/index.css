@@ -1,37 +1,36 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 220 33% 12%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 221 83% 53%;
+    --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 62% 50%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 20%;
-    --input: 217 33% 22%;
-    --ring: 212 73% 59%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
 
@@ -43,6 +42,36 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 20%;
     --sidebar-ring: 212 73% 59%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
   }
 }
 
@@ -59,11 +88,11 @@
 @layer components {
   .trading-grid {
     display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     grid-template-rows: auto;
     grid-template-areas:
       "stats stats stats"
-      "global-matches buy-sell order-book"
+      "order-book buy-sell global-matches"
       "active-orders active-orders history";
     gap: 1rem;
   }
@@ -81,7 +110,8 @@
     }
   }
 
-  .stats-panel {
+  .stats-panel,
+  .statistics-panel {
     grid-area: stats;
   }
 
@@ -95,6 +125,8 @@
 
   .order-book {
     grid-area: order-book;
+    min-height: 400px;
+    max-height: 400px;
   }
 
   .active-orders {
@@ -107,5 +139,85 @@
   
   .trading-panel {
     @apply rounded-lg bg-card p-4 border border-border shadow;
+    height: fit-content;
+    max-height: 400px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
+  
+  .trading-panel h2 {
+    @apply mb-2;
+  }
+  
+  .table-container {
+    flex: 1;
+    overflow-y: auto;
+    max-height: calc(100% - 40px);
+    scrollbar-width: thin;
+  }
+}
+
+.table-container {
+  overflow-y: auto;
+  min-height: 200px;
+  max-height: 300px;
+  scrollbar-width: thin;
+}
+
+.trading-panel {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.trading-panel h2 {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid hsl(var(--border));
+  position: sticky;
+  top: 0;
+  background-color: hsl(var(--card));
+  z-index: 10;
+}
+
+.text-positive {
+  color: rgb(16, 185, 129);
+}
+
+.text-negative {
+  color: rgb(239, 68, 68);
+}
+
+.order-book {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.order-book .table-container {
+  min-height: 150px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.statistics-panel {
+  height: auto;
+}
+
+.fixed-height-panel {
+  height: 350px;
+  overflow: hidden;
+}
+
+/* Tornar cabeçalhos das tabelas fixos */
+thead.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: hsl(var(--card));
 }

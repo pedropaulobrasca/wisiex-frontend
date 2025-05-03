@@ -1,8 +1,7 @@
-
 import axios from 'axios';
 
 // Esta URL pode precisar ser atualizada se o tunnel ngrok expirou
-const API_URL = 'https://7709-2804-7f0-9402-ef0-ac93-2b71-d52e-201b.ngrok-free.app';
+const API_URL = 'http://localhost:3333';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -32,6 +31,7 @@ api.interceptors.response.use(
       // Não autorizado - limpa token e redireciona para login
       localStorage.removeItem('token');
       localStorage.removeItem('username');
+      localStorage.removeItem('userId');
       window.location.href = '/';
     }
     return Promise.reject(error);
@@ -39,13 +39,13 @@ api.interceptors.response.use(
 );
 
 // Função de utilidade para verificar se o servidor está online
-const checkServerStatus = async () => {
+export const checkServerStatus = async () => {
   try {
     await api.get('/health', { timeout: 3000 });
     return true;
   } catch (error) {
-    console.warn('Servidor API inacessível. Usando dados de demonstração.');
-    return false;
+    console.warn('Servidor API inacessível.');
+    throw error;
   }
 };
 
@@ -53,8 +53,30 @@ export const authService = {
   login: async (username: string) => {
     try {
       const response = await api.post('/auth/login', { username });
-      localStorage.setItem('token', response.data.token);
+      const token = response.data.token;
+      localStorage.setItem('token', token);
       localStorage.setItem('username', username);
+      
+      // Extrair userId do token JWT
+      if (token) {
+        try {
+          // Decodificar o token (sem verificar assinatura, apenas para extrair os dados)
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          
+          const decodedToken = JSON.parse(jsonPayload);
+          if (decodedToken.userId) {
+            localStorage.setItem('userId', decodedToken.userId);
+            console.log('userId extraído e armazenado:', decodedToken.userId);
+          }
+        } catch (decodeError) {
+          console.error('Erro ao decodificar token:', decodeError);
+        }
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Erro de login:', error);
@@ -64,12 +86,14 @@ export const authService = {
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+    localStorage.removeItem('userId');
     window.location.href = '/';
   },
   getUser: () => {
     return {
       username: localStorage.getItem('username'),
       token: localStorage.getItem('token'),
+      userId: localStorage.getItem('userId'),
     };
   },
   isAuthenticated: () => {
@@ -77,59 +101,27 @@ export const authService = {
   },
 };
 
-// Dados de demonstração para quando a API estiver indisponível
-const demoData = {
-  statistics: {
-    lastPrice: 48500,
-    btcVolume: 3.75,
-    usdVolume: 182500,
-    high: 49800,
-    low: 47200
-  },
-  orderBook: {
-    bids: [
-      { price: 48000, volume: 0.5 },
-      { price: 47800, volume: 0.75 },
-      { price: 47500, volume: 1.2 }
-    ],
-    asks: [
-      { price: 48200, volume: 0.6 },
-      { price: 48500, volume: 0.9 },
-      { price: 49000, volume: 1.0 }
-    ]
-  },
-  balance: {
-    btc: 1.5,
-    usd: 75000
-  }
-};
-
 export const tradeService = {
   getStatistics: async () => {
     try {
-      // Endpoint não está no client.http mas é necessário para o frontend
       const response = await api.get('/statistics');
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar estatísticas:', error);
-      // Retorna valores de demonstração em caso de erro
-      return demoData.statistics;
+      throw error;
     }
   },
   getOrderBook: async () => {
     try {
-      // Atualizado para corresponder ao endpoint no client.http
       const response = await api.get('/order-book');
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar order book:', error);
-      // Retorna order book vazio em caso de erro
-      return demoData.orderBook;
+      throw error;
     }
   },
   getGlobalMatches: async () => {
     try {
-      // Atualizado para corresponder ao endpoint no client.http
       const response = await api.get('/matches');
       return response.data;
     } catch (error) {
@@ -139,9 +131,24 @@ export const tradeService = {
   },
   getUserOrders: async () => {
     try {
-      // Atualizado para corresponder ao endpoint no client.http
       const response = await api.get('/orders');
-      return response.data;
+      console.log('Resposta raw das ordens do usuário:', response.data);
+      
+      const normalizedOrders = Array.isArray(response.data) ? response.data.map(order => ({
+        ...order,
+        type: order.type ? order.type.toUpperCase() : 'BUY',
+        
+        status: order.status === 'OPEN' ? 'active' : 
+               order.status === 'open' ? 'active' :
+               order.status === 'CANCELED' ? 'cancelled' : 
+               order.status === 'canceled' ? 'cancelled' :
+               order.status === 'COMPLETED' ? 'completed' : 
+               order.status === 'completed' ? 'completed' : 
+               order.status || 'active'
+      })) : [];
+      
+      console.log('Ordens normalizadas:', normalizedOrders);
+      return normalizedOrders;
     } catch (error) {
       console.error('Erro ao buscar ordens do usuário:', error);
       return [];
@@ -149,7 +156,6 @@ export const tradeService = {
   },
   getUserMatches: async () => {
     try {
-      // Atualizado para corresponder ao endpoint no client.http
       const response = await api.get('/matches/my-matches');
       return response.data;
     } catch (error) {
@@ -158,11 +164,10 @@ export const tradeService = {
     }
   },
   placeOrder: async (orderData: {
-    type: 'buy' | 'sell';
+    type: 'buy' | 'sell' | 'BUY' | 'SELL';
     amount: number;
     price: number;
   }) => {
-    // Atualizado para corresponder ao formato no client.http para tipo de ordem (maiúsculas)
     const formattedData = {
       ...orderData,
       type: orderData.type.toUpperCase()
@@ -176,32 +181,22 @@ export const tradeService = {
   },
   getUserBalance: async () => {
     try {
-      // Este endpoint não estava no client.http, mas é necessário para o frontend
-      // Tentaremos primeiro '/user/balance' e, se falhar, tentaremos um endpoint alternativo
       try {
         const response = await api.get('/user/balance');
         return response.data;
       } catch (balanceError) {
-        // Se o primeiro endpoint falhar, tentamos um endpoint alternativo
-        try {
-          const altResponse = await api.get('/auth/user');
-          // Se o endpoint alternativo retornar dados de saldo, usamos eles
-          if (altResponse.data && (altResponse.data.btc !== undefined || altResponse.data.usd !== undefined)) {
-            return {
-              btc: altResponse.data.btc || altResponse.data.balance?.btc || 0,
-              usd: altResponse.data.usd || altResponse.data.balance?.usd || 0,
-            };
-          }
-          throw new Error('Nenhum dado de saldo encontrado na resposta alternativa');
-        } catch (altError) {
-          console.error('Também falhou ao buscar saldo pelo endpoint alternativo:', altError);
-          throw balanceError; // Lança o erro original
+        const altResponse = await api.get('/auth/user');
+        if (altResponse.data && (altResponse.data.btc !== undefined || altResponse.data.usd !== undefined)) {
+          return {
+            btc: altResponse.data.btc || altResponse.data.balance?.btc || 0,
+            usd: altResponse.data.usd || altResponse.data.balance?.usd || 0,
+          };
         }
+        throw new Error('Nenhum dado de saldo encontrado na resposta alternativa');
       }
     } catch (error) {
       console.error('Erro ao buscar saldo do usuário:', error);
-      // Retorna saldo de demonstração em caso de erro
-      return demoData.balance;
+      throw error;
     }
   },
 };
