@@ -73,22 +73,47 @@ class SocketService {
       } else {
         this.connect();
       }
-    }, 3000);
+    }, 1000);
   }
   
   private setupServerEvents(): void {
     if (!this.socket) return;
     
     // Eventos específicos da aplicação
-    const socketEvents = ['newOrder', 'newMatch', 'updateStatistics', 'orderCancelled', 'balanceUpdate'];
+    const socketEvents = ['newOrder', 'newMatch', 'updateStatistics', 'orderCancelled', 'balanceUpdate', 'orderBookUpdate'];
+    
+    // Configuração otimizada para alta prioridade para certos eventos
+    const highPriorityEvents = ['orderBookUpdate', 'balanceUpdate', 'newOrder'];
     
     socketEvents.forEach(event => {
       this.socket?.on(event, (data: SocketEventData) => {
-        if (this.listeners[event]) {
-          this.listeners[event].forEach(callback => callback(data));
+        console.log(`📣 Recebido evento "${event}":`, data);
+        
+        if (highPriorityEvents.includes(event)) {
+          // Para eventos de alta prioridade, processamos imediatamente
+          this.processEventImmediately(event, data);
+        } else {
+          // Para eventos regulares, usar o comportamento normal
+          if (this.listeners[event]) {
+            this.listeners[event].forEach(callback => callback(data));
+          } else {
+            console.warn(`⚠️ Nenhum listener registrado para o evento "${event}"`);
+          }
         }
       });
     });
+  }
+  
+  private processEventImmediately(event: string, data: SocketEventData): void {
+    // Use setTimeout com tempo zero para priorizar o evento na fila de processamento 
+    // mas ainda permitir que o navegador responda a eventos de UI
+    setTimeout(() => {
+      if (this.listeners[event]) {
+        this.listeners[event].forEach(callback => callback(data));
+      } else {
+        console.warn(`⚠️ Nenhum listener registrado para o evento de alta prioridade "${event}"`);
+      }
+    }, 0);
   }
   
   on(event: string, callback: SocketEventCallback): void {

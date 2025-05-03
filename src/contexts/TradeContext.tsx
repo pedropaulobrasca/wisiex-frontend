@@ -24,6 +24,8 @@ export interface Match {
   createdAt: string;
   buyOrderId: string;
   sellOrderId: string;
+  buyerId: string;
+  sellerId: string;
 }
 
 export interface OrderBook {
@@ -79,6 +81,14 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [selectedOrderForSell, setSelectedOrderForSell] = useState<{ price: number; volume: number } | null>(null);
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const userId = localStorage.getItem('userId');
+      setCurrentUserId(userId);
+    }
+  }, [isAuthenticated]);
 
   const fetchData = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -132,24 +142,85 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const placeOrder = async (type: OrderType, amount: number, price: number) => {
     try {
       const formattedType = typeof type === 'string' ? type.toUpperCase() as OrderType : type;
-      await tradeService.placeOrder({ type: formattedType, amount, price });
+      
+      // Atualizações otimistas (antes da resposta do servidor)
+      // Criar uma ordem temporária com ID local
+      const tempOrderId = `temp-${Date.now()}`;
+      const tempOrder = {
+        id: tempOrderId,
+        userId: currentUserId || '',
+        type: formattedType,
+        amount,
+        price,
+        status: 'OPEN' as const,
+        createdAt: new Date().toISOString()
+      } as Order;
+      
+      // Adicionar imediatamente à lista de ordens locais
+      setUserOrders(prev => [tempOrder, ...prev]);
+      
+      // Atualizar localmente o orderbook (otimista)
+      if (orderBook) {
+        const newOrderBook = { ...orderBook };
+        const orderEntry = { price, volume: amount };
+        
+        if (formattedType === 'BUY') {
+          const bidIndex = newOrderBook.bids.findIndex(bid => bid.price === price);
+          if (bidIndex >= 0) {
+            newOrderBook.bids[bidIndex].volume += amount;
+          } else {
+            // Inserir na posição correta (ordem decrescente)
+            const insertIndex = newOrderBook.bids.findIndex(bid => bid.price < price);
+            if (insertIndex >= 0) {
+              newOrderBook.bids.splice(insertIndex, 0, orderEntry);
+            } else {
+              newOrderBook.bids.push(orderEntry);
+            }
+            // Reordenar bids (preço decrescente)
+            newOrderBook.bids.sort((a, b) => b.price - a.price);
+          }
+        } else {
+          const askIndex = newOrderBook.asks.findIndex(ask => ask.price === price);
+          if (askIndex >= 0) {
+            newOrderBook.asks[askIndex].volume += amount;
+          } else {
+            // Inserir na posição correta (ordem crescente)
+            const insertIndex = newOrderBook.asks.findIndex(ask => ask.price > price);
+            if (insertIndex >= 0) {
+              newOrderBook.asks.splice(insertIndex, 0, orderEntry);
+            } else {
+              newOrderBook.asks.push(orderEntry);
+            }
+            // Reordenar asks (preço crescente)
+            newOrderBook.asks.sort((a, b) => a.price - b.price);
+          }
+        }
+        
+        setOrderBook(newOrderBook);
+      }
+      
+      // Enviar a ordem ao servidor
+      const response = await tradeService.placeOrder({ type: formattedType, amount, price });
       toast({
         title: 'Ordem enviada com sucesso',
         description: `Sua ordem de ${type} para ${amount} BTC a $${price} foi enviada.`,
       });
       
-      // Atualizar saldo imediatamente após colocar ordem
-      try {
-        const newBalance = await tradeService.getUserBalance();
-        console.log('Saldo atualizado após enviar ordem:', newBalance);
-        setBalance(newBalance);
-      } catch (balanceError) {
-        console.error('Erro ao atualizar saldo após enviar ordem:', balanceError);
+      // Substituir a ordem temporária pela ordem real do servidor
+      if (response && response.id) {
+        console.log('Substituindo ordem temporária pela ordem real:', response);
+        setUserOrders(prev => {
+          const filtered = prev.filter(o => o.id !== tempOrderId);
+          return [response, ...filtered];
+        });
       }
       
-      fetchData();
     } catch (error) {
       console.error('Erro ao enviar ordem:', error);
+      
+      // Remover a ordem temporária em caso de erro
+      setUserOrders(prev => prev.filter(o => !o.id.startsWith('temp-')));
+      
       toast({
         variant: 'destructive',
         title: 'Falha ao enviar ordem',
@@ -160,24 +231,54 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const cancelOrder = async (orderId: string) => {
     try {
+      // Atualizações otimistas (antes da resposta do servidor)
+      // Remover a ordem da lista de ordens do usuário
+      const orderToCancel = userOrders.find(o => o.id === orderId);
+      
+      if (orderToCancel) {
+        // Atualizar a lista de ordens localmente
+        setUserOrders(prev => prev.filter(order => order.id !== orderId));
+        
+        // Atualizar o orderbook localmente
+        if (orderBook && orderToCancel.status === 'OPEN') {
+          const newOrderBook = { ...orderBook };
+          
+          if (orderToCancel.type === 'BUY' || orderToCancel.type === 'buy') {
+            const bidIndex = newOrderBook.bids.findIndex(bid => bid.price === orderToCancel.price);
+            if (bidIndex >= 0) {
+              if (newOrderBook.bids[bidIndex].volume > orderToCancel.amount) {
+                newOrderBook.bids[bidIndex].volume -= orderToCancel.amount;
+              } else {
+                newOrderBook.bids.splice(bidIndex, 1);
+              }
+            }
+          } else {
+            const askIndex = newOrderBook.asks.findIndex(ask => ask.price === orderToCancel.price);
+            if (askIndex >= 0) {
+              if (newOrderBook.asks[askIndex].volume > orderToCancel.amount) {
+                newOrderBook.asks[askIndex].volume -= orderToCancel.amount;
+              } else {
+                newOrderBook.asks.splice(askIndex, 1);
+              }
+            }
+          }
+          
+          setOrderBook(newOrderBook);
+        }
+      }
+      
+      // Enviar o cancelamento para o servidor
       await tradeService.cancelOrder(orderId);
       toast({
         title: 'Ordem cancelada',
         description: 'Sua ordem foi cancelada com sucesso.',
       });
-      
-      // Atualizar saldo imediatamente após cancelar ordem
-      try {
-        const newBalance = await tradeService.getUserBalance();
-        console.log('Saldo atualizado após cancelar ordem:', newBalance);
-        setBalance(newBalance);
-      } catch (balanceError) {
-        console.error('Erro ao atualizar saldo após cancelar ordem:', balanceError);
-      }
-      
-      fetchData();
     } catch (error) {
       console.error('Erro ao cancelar ordem:', error);
+      
+      // Desfazer a atualização otimista em caso de erro
+      fetchData(); // Carregar dados novamente
+      
       toast({
         variant: 'destructive',
         title: 'Falha ao cancelar ordem',
@@ -200,6 +301,9 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           title: 'Conectado ao servidor',
           description: 'Dados em tempo real estão sendo recebidos.',
         });
+        
+        // Recarregar dados após reconexão para garantir sincronização
+        fetchData();
       };
       
       const handleDisconnect = () => {
@@ -215,69 +319,97 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Configurar os listeners para cada tipo de atualização
       
       // 1. Nova negociação ou match
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handleNewMatch = (match: any) => {
+      const handleNewMatch = (match: Match) => {
         console.log('Recebido novo match:', match);
-        setGlobalMatches(prevMatches => [match, ...prevMatches.slice(0, 19)]);
         
-        // Se o usuário estiver envolvido na negociação, atualizar os matches do usuário também
-        setUserMatches(prev => {
-          const isUserMatch = match.buyOrderId || match.sellOrderId; // Na prática, verificaríamos se o ID do usuário corresponde
-          if (isUserMatch) {
-            return [match, ...prev.slice(0, 19)];
+        // Adicionar à lista global de matches
+        setGlobalMatches(prevMatches => {
+          const isDuplicate = prevMatches.some(m => m.id === match.id);
+          if (!isDuplicate) {
+            return [match, ...prevMatches.slice(0, 19)];
           }
-          return prev;
+          return prevMatches;
         });
         
-        // Atualizar o saldo de forma imediata após um match
-        tradeService.getUserBalance()
-          .then(newBalance => {
-            console.log('Saldo atualizado após match:', newBalance);
-            setBalance(newBalance);
-          })
-          .catch(err => console.error('Erro ao atualizar saldo após match:', err));
+        // Se o usuário estiver envolvido na negociação, atualizar os matches do usuário também
+        const userId = currentUserId;
+        if (userId && (match.buyerId === userId || match.sellerId === userId)) {
+          setUserMatches(prev => {
+            const isDuplicate = prev.some(m => m.id === match.id);
+            if (!isDuplicate) {
+              return [match, ...prev.slice(0, 19)];
+            }
+            return prev;
+          });
+        }
       };
       
       // 2. Nova ordem
-      const handleNewOrder = () => {
-        // Atualizar o order book
-        tradeService.getOrderBook()
-          .then(data => setOrderBook(data))
-          .catch(err => console.error('Erro ao atualizar order book:', err));
+      const handleNewOrder = (order: Order) => {
+        console.log('Recebido nova ordem:', order);
         
-        // Atualizar as ordens do usuário
-        tradeService.getUserOrders()
-          .then(data => setUserOrders(data))
-          .catch(err => console.error('Erro ao atualizar ordens do usuário:', err));
+        // Se for uma ordem do usuário atual, atualizar a lista de ordens do usuário
+        const userId = currentUserId;
+        if (userId && order.userId === userId) {
+          setUserOrders(prev => {
+            const index = prev.findIndex(o => o.id === order.id);
+            if (index >= 0) {
+              // Atualizar ordem existente
+              const updated = [...prev];
+              updated[index] = order;
+              return updated;
+            } else {
+              // Adicionar nova ordem
+              return [order, ...prev];
+            }
+          });
+        }
+        
+        // Após qualquer nova ordem, solicitar atualização do order book
+        // como fallback, caso o evento orderBookUpdate não chegue
+        if (order.status === 'OPEN') {
+          console.log('Solicitando atualização do order book após nova ordem');
+          tradeService.getOrderBook()
+            .then(updatedOrderBook => {
+              if (updatedOrderBook && 
+                  (updatedOrderBook.asks.length !== orderBook?.asks.length || 
+                   updatedOrderBook.bids.length !== orderBook?.bids.length)) {
+                console.log('Atualizando order book manualmente após nova ordem');
+                setOrderBook(updatedOrderBook);
+              }
+            })
+            .catch(err => console.error('Erro ao atualizar order book após nova ordem:', err));
+        }
       };
       
-      // 3. Atualização de estatísticas
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handleStatisticsUpdate = (updatedStats: any) => {
+      // 3. Atualização do order book
+      const handleOrderBookUpdate = (updatedOrderBook: OrderBook) => {
+        console.log('Recebido atualização do order book:', updatedOrderBook);
+        setOrderBook(updatedOrderBook);
+      };
+      
+      // 4. Atualização de estatísticas
+      const handleStatisticsUpdate = (updatedStats: Statistics) => {
+        console.log('Recebido atualização de estatísticas:', updatedStats);
         setStatistics(updatedStats);
       };
       
-      // 4. Ordem cancelada
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handleOrderCancelled = (orderData: any) => {
-        // Atualizar o order book
-        tradeService.getOrderBook()
-          .then(data => setOrderBook(data))
-          .catch(err => console.error('Erro ao atualizar order book após cancelamento:', err));
+      // 5. Ordem cancelada
+      const handleOrderCancelled = (orderData: { orderId: string }) => {
+        console.log('Recebido cancelamento de ordem:', orderData);
         
-        // Atualizar as ordens do usuário
+        // Remover da lista de ordens do usuário
         setUserOrders(prev => prev.filter(order => order.id !== orderData.orderId));
       };
       
-      // 5. Atualização de saldo do usuário
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handleBalanceUpdate = (data: any) => {
-        const { userId, balance } = data;
+      // 6. Atualização de saldo do usuário
+      const handleBalanceUpdate = (data: { userId: string, balance: Balance }) => {
+        const { userId, balance: newBalance } = data;
         
         // Verificar se o evento de saldo é para o usuário atual
-        if (userId === localStorage.getItem('userId')) {
-          console.log('Recebido atualização de saldo:', balance);
-          setBalance(balance);
+        if (userId === currentUserId) {
+          console.log('Recebido atualização de saldo:', newBalance);
+          setBalance(newBalance);
         }
       };
       
@@ -286,6 +418,7 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       socketService.on('disconnect', handleDisconnect);
       socketService.on('newMatch', handleNewMatch);
       socketService.on('newOrder', handleNewOrder);
+      socketService.on('orderBookUpdate', handleOrderBookUpdate);
       socketService.on('updateStatistics', handleStatisticsUpdate);
       socketService.on('orderCancelled', handleOrderCancelled);
       socketService.on('balanceUpdate', handleBalanceUpdate);
@@ -299,15 +432,16 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         socketService.off('disconnect', handleDisconnect);
         socketService.off('newMatch', handleNewMatch);
         socketService.off('newOrder', handleNewOrder);
+        socketService.off('orderBookUpdate', handleOrderBookUpdate);
         socketService.off('updateStatistics', handleStatisticsUpdate);
         socketService.off('orderCancelled', handleOrderCancelled);
         socketService.off('balanceUpdate', handleBalanceUpdate);
         socketService.disconnect();
       };
     }
-  }, [isAuthenticated, fetchData, toast]);
+  }, [isAuthenticated, fetchData, toast, currentUserId]);
 
-  // Verificação periódica do status da conexão
+  // Verificação periódica do status da conexão e sincronização de dados
   useEffect(() => {
     if (isAuthenticated) {
       // Verificar estado inicial logo após autenticação
@@ -315,17 +449,65 @@ export const TradeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const isConnected = socketService.isConnected();
         setConnectionStatus(isConnected ? 'connected' : 'disconnected');
         console.log('Status inicial da conexão:', isConnected ? 'conectado' : 'desconectado');
-      }, 2000);
+      }, 1000);
       
       // Verificar periodicamente o estado da conexão
-      const interval = setInterval(() => {
+      const connectionInterval = setInterval(() => {
         const isConnected = socketService.isConnected();
         setConnectionStatus(isConnected ? 'connected' : 'disconnected');
+      }, 3000);
+      
+      // Sincronizar dados a cada 5 segundos para garantir consistência
+      const syncInterval = setInterval(() => {
+        console.log('Sincronizando dados...');
+        
+        // Apenas atualizar os dados mais críticos que precisam estar sincronizados
+        Promise.allSettled([
+          tradeService.getOrderBook(),
+          tradeService.getUserOrders(),
+          tradeService.getUserBalance()
+        ]).then(results => {
+          if (results[0].status === 'fulfilled') {
+            const newOrderBook = results[0].value;
+            setOrderBook(current => {
+              // Verificar se há mudanças significativas para evitar re-renders desnecessários
+              const hasSignificantChange = !current || 
+                JSON.stringify(newOrderBook.bids) !== JSON.stringify(current.bids) || 
+                JSON.stringify(newOrderBook.asks) !== JSON.stringify(current.asks);
+              
+              return hasSignificantChange ? newOrderBook : current;
+            });
+          }
+          
+          if (results[1].status === 'fulfilled') {
+            const newOrders = results[1].value;
+            setUserOrders(current => {
+              // Verificar se há diferença nas ordens
+              if (newOrders.length !== current.length) return newOrders;
+              
+              const currentIds = current.map(o => o.id).sort().join(',');
+              const newIds = newOrders.map(o => o.id).sort().join(',');
+              return currentIds !== newIds ? newOrders : current;
+            });
+          }
+          
+          if (results[2].status === 'fulfilled') {
+            const newBalance = results[2].value;
+            setBalance(current => {
+              if (!current) return newBalance;
+              if (current.btc !== newBalance.btc || current.usd !== newBalance.usd) {
+                return newBalance;
+              }
+              return current;
+            });
+          }
+        });
       }, 5000);
       
       return () => {
         clearTimeout(initialCheck);
-        clearInterval(interval);
+        clearInterval(connectionInterval);
+        clearInterval(syncInterval);
       };
     }
   }, [isAuthenticated]);
