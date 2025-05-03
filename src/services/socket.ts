@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
-// Usar a mesma URL da API
-const API_URL = 'http://localhost:3333';
+// Usar a variável de ambiente ao invés de valor hardcoded
+const SOCKET_URL = import.meta.env.VITE_WEBSOCKET_URL || 'http://localhost:3333';
 
 // Definição de tipos para os dados
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,8 +27,8 @@ class SocketService {
       return;
     }
     
-    console.log('Iniciando nova conexão com o socket em:', API_URL);
-    this.socket = io(API_URL, {
+    console.log('Iniciando nova conexão com o socket em:', SOCKET_URL);
+    this.socket = io(SOCKET_URL, {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       autoConnect: true,

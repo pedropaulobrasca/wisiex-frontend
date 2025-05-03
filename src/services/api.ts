@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Esta URL pode precisar ser atualizada se o tunnel ngrok expirou
-const API_URL = 'http://localhost:3333';
+// Usar a variável de ambiente ao invés de valor hardcoded
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
 
 const api = axios.create({
   baseURL: API_URL,

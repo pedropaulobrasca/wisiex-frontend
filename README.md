@@ -1,73 +1,105 @@
-# Welcome to your Lovable project
+# Wisiex Exchange - Frontend
 
-## Project info
+Interface de usuário para a plataforma Wisiex Exchange, uma exchange de criptomoedas desenvolvida com tecnologias modernas e foco em experiência de usuário.
 
-**URL**: https://lovable.dev/projects/25512e2e-c74d-447d-b2e9-2692e58382b2
+## 🚀 Tecnologias
 
-## How can I edit this code?
+- **React + TypeScript**: Desenvolvimento frontend com tipagem estática
+- **Vite**: Build tool rápida e eficiente
+- **Tailwind CSS**: Framework CSS utility-first para design responsivo
+- **shadcn/ui**: Componentes de UI reutilizáveis e acessíveis
+- **Socket.io-client**: Comunicação em tempo real com o backend
+- **React Query**: Gerenciamento de estado assíncrono e caching
+- **React Router**: Navegação entre páginas
+- **React Hook Form**: Gerenciamento de formulários
 
-There are several ways of editing your application.
+## 📊 Funcionalidades
 
-**Use Lovable**
+- **Autenticação de usuários**
+- **Visualização de saldo em tempo real**
+- **Criação de ordens de compra/venda**
+- **Cancelamento de ordens**
+- **Order Book (livro de ofertas) em tempo real**
+- **Histórico de matches e transações**
+- **Dashboard com estatísticas atualizadas**
+- **Interface responsiva e moderna**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/25512e2e-c74d-447d-b2e9-2692e58382b2) and start prompting.
+## 🛠️ Como executar o projeto
 
-Changes made via Lovable will be committed automatically to this repo.
+1. Clone o repositório:
+```bash
+git clone https://github.com/pedropaulobrasca/wisiex-frontend.git
+cd wisiex-frontend
+```
 
-**Use your preferred IDE**
+2. Instale as dependências:
+```bash
+npm install
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+3. Configure o arquivo de ambiente:
+Crie um arquivo `.env` na raiz do projeto com:
+```
+VITE_API_URL=http://localhost:3333
+VITE_WEBSOCKET_URL=http://localhost:3334
+```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+4. Execute o servidor de desenvolvimento:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+5. Acesse a aplicação em `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 📡 Comunicação com o Backend
 
-**Use GitHub Codespaces**
+A aplicação frontend se comunica com o backend através de:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- **API REST**: Para operações como login, criação de ordens, etc.
+- **WebSockets**: Para receber atualizações em tempo real de:
+  - Novas ordens
+  - Novos matches
+  - Atualizações de estatísticas
+  - Ordens canceladas
+  - Atualizações do order book
+  - Atualizações de saldo
 
-## What technologies are used for this project?
+## 🧪 Testes
 
-This project is built with:
+Execute os testes com:
+```bash
+npm test
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 📦 Build para produção
 
-## How can I deploy this project?
+Para gerar uma build otimizada:
+```bash
+npm run build
+```
 
-Simply open [Lovable](https://lovable.dev/projects/25512e2e-c74d-447d-b2e9-2692e58382b2) and click on Share -> Publish.
+Os arquivos serão gerados na pasta `dist/`.
 
-## Can I connect a custom domain to my Lovable project?
+## 📋 Estrutura do Projeto
 
-Yes, you can!
+```
+src/
+├── assets/         # Imagens e recursos estáticos
+├── components/     # Componentes reutilizáveis
+├── contexts/       # Contextos React
+├── hooks/          # Custom hooks
+├── lib/            # Utilitários e configurações
+├── pages/          # Páginas da aplicação
+├── services/       # Serviços de API e WebSocket
+├── store/          # Gerenciamento de estado global
+├── styles/         # Estilos globais
+├── types/          # Definições de tipos TypeScript
+└── main.tsx        # Ponto de entrada da aplicação
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🔄 Melhorias recentes
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- **Otimização de performance**: Redução de timers e chamadas desnecessárias
+- **Atualizações otimistas na UI**: Reflexo imediato das ações do usuário antes da resposta do servidor
+- **Priorização de eventos WebSocket**: Tratamento diferenciado para eventos críticos
+- **Melhorias na experiência do usuário**: Feedback visual para operações em andamento
