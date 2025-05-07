@@ -1,0 +1,33 @@
+# Dependências
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Sistema de arquivos
+.DS_Store
+Thumbs.db
+
+# Diretórios de build
+/dist
+/build
+
+# Arquivos de ambiente local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Arquivos do versionamento de código
+.git
+.gitignore
+
+# Logs
+logs
+*.log
+
+# Arquivos de configuração específicos do editor
+.idea/
+.vscode/
+*.swp
+*.swo 

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    # Se você precisar de variáveis de ambiente em produção
+    # environment:
+    #   - NODE_ENV=production
+    #   - VITE_API_URL=https://api.exemplo.com 
